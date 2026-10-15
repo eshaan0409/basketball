@@ -27,10 +27,12 @@ cd doorbell && npm install && npm run dev    # then open http://localhost:3000/d
 
 Same for `rewater` (open `/verify`) and `vouched` (open `/demo`, then `/start`).
 
-To get links you can open on your phone, deploy on Vercel (free): **Add New Project → import `eshaan0409/basketball`
-→ pick branch `claude/three-ventures` → set Root Directory to `rewater`** (then repeat for `vouched` and `doorbell`).
-Rewater works fully when deployed. Vouched and Doorbell work for demos, but their data resets on Vercel until we add a
-database (question 2).
+To get links you can open on your phone, deploy on Vercel (free). Vercel builds from `main`, and the apps are only on
+`claude/three-ventures` so far, so first either merge the branch into `main` (question 7) or, after importing, change
+the project's production branch to `claude/three-ventures` in its Git settings. Then: **Add New Project → import
+`eshaan0409/basketball` → set Root Directory to `rewater`**, and repeat for `vouched` and `doorbell`. Rewater works
+fully when deployed. Vouched and Doorbell work for demos, but their data resets on Vercel until we add a database
+(question 2).
 
 ## Decisions I made for you
 
