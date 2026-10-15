@@ -62,10 +62,16 @@ and anything that looks unfinished. Crop tall phone screenshots with PIL if need
 
 ## 5. Drive the critical flow as a user would
 
-For anything with forms, uploads or multi-step state, write a short Playwright script (see
-`scripts/shoot.mjs` for the setup) that does the flow end to end and prints what it observed: the success
-state, one validation error, and no page errors. Run it with the Playwright install `shoot.sh` already made at
-`${TMPDIR:-/tmp}/ship-check/pw`.
+Each app keeps its flow scripts in `<app>/e2e/*.mjs` (rewater: CSV upload; vouched: student → verifier → reader;
+doorbell: assistant demo, owner setup, public booking). Run one against a served build:
+
+```bash
+.claude/skills/ship-check/scripts/run-e2e.sh vouched/e2e/flow.mjs http://localhost:3102
+```
+
+Each prints numbered observations and ends with `errors: none` (Vouched also lists one intended 404 from a revoked
+link). For new flows, copy one of these: real clicks and form fills, at least one validation error, and multiple
+browser contexts when more than one person is involved.
 
 ## Known failure modes
 
@@ -73,3 +79,14 @@ state, one validation error, and no page errors. Run it with the Playwright inst
   `serve.sh` prevents it; check the server log if it recurs.
 - Chart wider than the phone: a grid or flex child without `min-w-0`, or a chart that rendered at its fallback width.
 - Click had no effect in a script: it landed before hydration. Wait about 1s after load.
+- Playwright "strict mode violation": the text appears twice (e.g. a card and a message preview). Scope the locator
+  (`page.locator("article", { hasText: "..." })`) instead of loosening the check.
+- A 4xx console error on a signed-out page: the page treats "signed out" as an error. Return 200 with a flag.
+- `serve.sh` killed your own shell (exit 144) in older versions: it matched any process in the app folder with "next"
+  in its command line. The current script only matches real Next servers and skips its own ancestors.
+
+## API-first apps
+
+When the product has a machine interface (MCP, REST, webhooks), test it the way an outside client would, with
+`curl` against the running server: the protocol handshake, one success per operation, malformed input, wrong
+method (405), CORS preflight, and signed vs. forged webhook payloads. See `doorbell/README.md` for an example.

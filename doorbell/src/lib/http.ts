@@ -56,6 +56,10 @@ export function rateLimit(key: string, limit: number, windowMs: number): void {
   if (recent.length >= limit) throw new ServiceError("Too many requests. Slow down and try again in a minute.", 429);
   recent.push(now);
   hits.set(key, recent);
+  // Keep memory bounded: drop idle keys once the map gets large.
+  if (hits.size > 5000) {
+    for (const [k, times] of hits) if (times.every((t: number) => now - t >= windowMs)) hits.delete(k);
+  }
 }
 
 export function clientIp(request: Request): string {

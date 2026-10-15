@@ -32,10 +32,15 @@ export class MemoryDb implements Db {
   async update<T>(fn: (data: Data) => T): Promise<T> {
     const run = this.lock.then(async () => {
       await this.refresh();
-      const draft = structuredClone(this.data);
+      const before = JSON.stringify(this.data);
+      const draft = JSON.parse(before) as Data;
       const result = fn(draft);
-      this.data = draft;
-      await this.persist();
+      const after = JSON.stringify(draft);
+      // Status checks and dashboards run inside update() so they can expire requests; most change nothing.
+      if (after !== before) {
+        this.data = draft;
+        await this.persist(after);
+      }
       return result;
     });
     this.lock = run.catch(() => undefined);
@@ -43,7 +48,7 @@ export class MemoryDb implements Db {
   }
 
   protected async refresh(): Promise<void> {}
-  protected async persist(): Promise<void> {}
+  protected async persist(_serialized: string): Promise<void> {}
 }
 
 /** JSON file, re-read when it changes on disk (Next.js may hold several copies of this module). */
@@ -67,10 +72,10 @@ export class FileDb extends MemoryDb {
     this.version = stamp;
   }
 
-  protected override async persist() {
+  protected override async persist(serialized: string) {
     await fs.mkdir(path.dirname(this.file), { recursive: true });
     const tmp = `${this.file}.${process.pid}.${randomUUID()}.tmp`;
-    await fs.writeFile(tmp, JSON.stringify(this.data), "utf8");
+    await fs.writeFile(tmp, serialized, "utf8");
     await fs.rename(tmp, this.file);
     const st = await fs.stat(this.file);
     this.version = `${st.mtimeMs}:${st.size}`;

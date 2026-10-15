@@ -229,3 +229,24 @@ describe("Twilio signatures", () => {
     expect(verifyTwilioSignature("12345", url, params, "bad")).toBe(false);
   });
 });
+
+describe("FileDb", () => {
+  it("persists changes, skips no-op writes, and sees other instances' writes", async () => {
+    const { FileDb } = await import("./db");
+    const { mkdtempSync, statSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const path = await import("node:path");
+    const file = path.join(mkdtempSync(path.join(tmpdir(), "doorbell-")), "data.json");
+    const a = new FileDb(file);
+    const b = new FileDb(file);
+    await ensureDemoShops(a);
+    expect(await b.read((d) => d.shops.length)).toBe(DEMO_SHOPS.length);
+    const before = statSync(file).mtimeMs;
+    await new Promise((r) => setTimeout(r, 15));
+    await a.update(() => undefined);
+    expect(statSync(file).mtimeMs).toBe(before);
+    const { provider } = fakeSms();
+    await requestBooking(b, provider, "riverbend-auto-demo", request(), NOW);
+    expect(await a.read((d) => d.bookings.length)).toBe(1);
+  });
+});

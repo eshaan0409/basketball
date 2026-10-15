@@ -88,6 +88,12 @@ UI calls it. That keeps it portable to an API or a worker later.
   (scoring, checks, formatting) in files with no Node imports so both sides can use it; `import type` from server
   modules is fine.
 
+- **Signed-out is a state, not an error.** A page that checks "who am I" on load should get `200 { signedIn: false }`,
+  not a 401: browsers log every 4xx as a console error, which hides real errors in `ship-check`.
+- Browsers refuse to set `User-Agent` on `fetch`. Pass identity in the body (e.g. `agent_name`) instead.
+- Stores that run "read and maybe expire things" inside a write transaction should skip the write when nothing
+  changed (compare serialized before/after), or every poll rewrites the file.
+
 ## Security habits that apply to every app
 
 - Unguessable tokens (`randomBytes(24).toString("base64url")`) for any link that grants access; store only a hash of
@@ -97,3 +103,7 @@ UI calls it. That keeps it portable to an API or a worker later.
   hashes appear in the public view's JSON.
 - Anything a student or customer can set that changes how trustworthy something looks (like an "organization
   domain") needs an abuse test: free email providers can never be an organization.
+- Webhooks from outside services (Twilio, Stripe) verify the provider's signature and are disabled when the secret
+  isn't configured. Test with the provider's documented example and with a forged signature.
+- Anything that sends a text or email on a public request gets a rate limit and a per-recipient cap.
+- Public demos that show other visitors' activity must scope it to the visitor's own items and mask phone numbers.
