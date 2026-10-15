@@ -90,8 +90,9 @@ describe("verification flow", () => {
     const share = await createShare(store, profile, { label: "UC application" });
     const shared = publicView(await getSharedProfile(store, share.token));
     const json = JSON.stringify(shared);
-    expect(json).not.toContain("natomasunified.org\"");
-    expect(json).not.toContain("dortiz@");
+    // Readers get the domain an answer came from, never the address itself.
+    expect(json).toContain('"emailDomain":"natomasunified.org"');
+    expect(json.toLowerCase()).not.toContain("dortiz@");
     expect(json).not.toContain(request.token);
     expect(json).not.toContain(profile.ownerHash);
     expect(shared.summary.organizationConfirmed).toBe(1);
@@ -198,5 +199,22 @@ describe("FileStore", () => {
     const b = new FileStore(file);
     expect((await requireOwner(b, secret)).name).toBe("Persisted");
     expect(JSON.parse(readFileSync(file, "utf8")).profiles).toHaveLength(1);
+  });
+
+  it("sees writes made through another instance on the same file", async () => {
+    // Next.js can load this module once per route bundle; each copy must see the others' writes.
+    const file = path.join(mkdtempSync(path.join(tmpdir(), "vouched-")), "data.json");
+    const pages = new FileStore(file);
+    const api = new FileStore(file);
+    const { secret } = await createProfile(api, { name: "Shared" });
+    const fromPages = await requireOwner(pages, secret);
+    const viaApi = await requireOwner(api, secret);
+    await updateActivity(api, viaApi, "missing", {}).catch(() => undefined);
+    await addActivity(api, viaApi, photo);
+    expect(fromPages.activities).toHaveLength(0);
+    expect((await requireOwner(pages, secret)).activities).toHaveLength(1);
+    // And concurrent saves from both copies keep both profiles.
+    await Promise.all([createProfile(pages, { name: "P" }), createProfile(api, { name: "A" })]);
+    expect(JSON.parse(readFileSync(file, "utf8")).profiles).toHaveLength(3);
   });
 });

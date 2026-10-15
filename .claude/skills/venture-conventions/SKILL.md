@@ -80,3 +80,20 @@ UI calls it. That keeps it portable to an API or a worker later.
   serving a stale build whose JS chunks 500 after a rebuild. Symptom: buttons do nothing.
 - Playwright: wait ~1s after `networkidle` before clicking, or the click lands before hydration.
 - `next build` rewrites `tsconfig.json` (`jsx: react-jsx`, extra include). Commit that change; it is expected.
+- **Module singletons are not singletons in Next.js.** Each route bundle (pages vs. API routes) can get its own copy
+  of a module, so an in-memory cache in one is stale in the other. Keep shared server state on `globalThis`, and make
+  file-backed stores re-read when the file changes (see `vouched/src/lib/store.ts`). Symptom: an API write succeeds
+  but a server-rendered page still shows the old data.
+- Server-only modules (`node:crypto`, `node:fs`) must not be imported by client components. Keep pure logic
+  (scoring, checks, formatting) in files with no Node imports so both sides can use it; `import type` from server
+  modules is fine.
+
+## Security habits that apply to every app
+
+- Unguessable tokens (`randomBytes(24).toString("base64url")`) for any link that grants access; store only a hash of
+  long-lived secrets.
+- Owner sessions: `httpOnly`, `sameSite: "lax"`, `secure` in production.
+- Shared/public pages for private data: `robots: { index: false }`, and a test asserting no emails, tokens or secret
+  hashes appear in the public view's JSON.
+- Anything a student or customer can set that changes how trustworthy something looks (like an "organization
+  domain") needs an abuse test: free email providers can never be an organization.

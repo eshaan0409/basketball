@@ -20,12 +20,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
             <div className="flex items-center gap-4 text-sm sm:gap-6">
               {site.nav.map((item) => (
-                <Link key={item.href} href={item.href} className="text-ink-2 hover:text-ink">
+                <Link key={item.href} href={item.href} className="hidden whitespace-nowrap text-ink-2 hover:text-ink sm:inline">
                   {item.label}
                 </Link>
               ))}
               {site.cta && (
-                <Link href={site.cta.href} className="rounded-md bg-brand px-3 py-1.5 font-medium text-brand-ink hover:opacity-90">
+                <Link href={site.cta.href} className="whitespace-nowrap rounded-md bg-brand px-3 py-1.5 font-medium text-brand-ink hover:opacity-90">
                   {site.cta.label}
                 </Link>
               )}

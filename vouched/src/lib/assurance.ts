@@ -57,7 +57,8 @@ export function classifyEmail(email: string, orgDomain: string): EmailKind {
   const domain = emailDomain(email);
   if (!domain) return "invalid";
   const org = normalizeDomain(orgDomain);
-  if (org && (domain === org || domain.endsWith(`.${org}`))) return "organization";
+  // A free email provider is never an organization, or every Gmail user could vouch "as the organization".
+  if (org && !FREE_EMAIL_DOMAINS.has(org) && (domain === org || domain.endsWith(`.${org}`))) return "organization";
   if (FREE_EMAIL_DOMAINS.has(domain)) return "personal";
   return "other";
 }
@@ -121,7 +122,15 @@ export interface StatementAssurance {
   corrected: boolean;
   /** Verified earlier, but the student has since changed the wording. */
   changedSinceVerified: boolean;
-  verifiedBy?: { name: string; title: string; organization: string; respondedAt: string; emailKind: EmailKind };
+  verifiedBy?: {
+    name: string;
+    title: string;
+    organization: string;
+    respondedAt: string;
+    emailKind: EmailKind;
+    /** The domain the verifier answered from, so readers can judge it themselves. Never the full address. */
+    emailDomain: string;
+  };
 }
 
 export interface ActivityAssurance {
@@ -185,6 +194,7 @@ export function assessActivity(activity: Activity, requests: VerificationRequest
             organization: activity.organization,
             respondedAt: r.response!.respondedAt,
             emailKind: classifyEmail(r.verifierEmail, activity.orgDomain),
+            emailDomain: emailDomain(r.verifierEmail) ?? "",
           },
         };
       }

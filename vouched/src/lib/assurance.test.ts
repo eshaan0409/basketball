@@ -91,3 +91,17 @@ describe("assessActivity on the demo profile", () => {
     expect(s.corrected).toBe(false);
   });
 });
+
+describe("gaming the organization level", () => {
+  it("never treats a free email provider as the organization", () => {
+    expect(classifyEmail("anyone@gmail.com", "gmail.com")).toBe("personal");
+    expect(checkVerifier({ email: "anyone@gmail.com", relationship: "supervisor", orgDomain: "https://gmail.com", name: "A" }).maxLevel).toBe(1);
+  });
+
+  it("tells readers which domain an answer came from, never the address", () => {
+    const profile = demoProfile();
+    const a = assessActivity(profile.activities.find((x) => x.id === "act-soccer")!, profile.requests);
+    expect(a.statements[0].verifiedBy?.emailDomain).toBe("riverdaleusd.example");
+    expect(JSON.stringify(a)).not.toContain("aruiz@");
+  });
+});
