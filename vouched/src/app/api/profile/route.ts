@@ -1,10 +1,18 @@
 import { currentOwner, handle, json, readBody, setOwnerCookie } from "@/lib/http";
-import { createProfile, updateProfile } from "@/lib/service";
+import { createProfile, ServiceError, updateProfile } from "@/lib/service";
 import { getStore, storageIsDurable } from "@/lib/store";
 import { ownerView } from "@/lib/views";
 
 export async function GET() {
-  return handle(async () => json({ ...ownerView(await currentOwner()), durable: storageIsDurable() }));
+  return handle(async () => {
+    // No record yet is a normal state (the page sends people to /start), so answer 200 rather than an error.
+    const profile = await currentOwner().catch((e) => {
+      if (e instanceof ServiceError && e.status === 401) return null;
+      throw e;
+    });
+    if (!profile) return json({ signedIn: false });
+    return json({ signedIn: true, ...ownerView(profile), durable: storageIsDurable() });
+  });
 }
 
 /** Start a new record. Returns the private key once so the student can save it. */

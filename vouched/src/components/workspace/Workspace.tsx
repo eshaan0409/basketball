@@ -26,10 +26,11 @@ export function Workspace() {
 
   const load = useCallback(async () => {
     try {
-      setView(await api<View>("/api/profile"));
+      const res = await api<(View & { signedIn: true }) | { signedIn: false }>("/api/profile");
+      if (res.signedIn) setView(res);
+      else router.replace("/start");
     } catch (e) {
-      if ((e as { status?: number }).status === 401) router.replace("/start");
-      else setError((e as Error).message);
+      setError((e as Error).message);
     }
   }, [router]);
 
